@@ -1,0 +1,1 @@
+{"name":"feed-shop-dashboard","private":true,"type":"module","scripts":{"backup":"node scripts/backup.mjs"},"dependencies":{"@supabase/supabase-js":"^2.45.4","nodemailer":"^6.9.15","xlsx":"^0.18.5"}}
