@@ -1,6 +1,9 @@
-const CFG=window.CFG,sb=supabase.createClient(CFG.url,CFG.key);
+const CFG=window.CFG;
+const publicPreview=!CFG.url||CFG.url.includes('YOUR-PROJECT')||!CFG.key||CFG.key.includes('YOUR-ANON-KEY');
+const sb=publicPreview?null:supabase.createClient(CFG.url,CFG.key);
 const L=k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-let db=L('db')||{products:[],sales:[],purchases:[],expenses:[]},q=L('q')||[],role=L('role'),user=L('user'),tab='dash',charts=[],cart=[{}],busy=false;
+const emptyDB=()=>({products:[],sales:[],purchases:[],expenses:[]});
+let db=publicPreview?emptyDB():(L('db')||emptyDB()),q=publicPreview?[]:(L('q')||[]),role=publicPreview?'viewer':L('role'),user=publicPreview?'پیش‌نمایش عمومی':L('user'),tab='dash',charts=[],cart=[{}],busy=false;
 const inv={day:'',customer:'',ctype:'خرده',pay:'نقدی'},V={},PAY=['نقدی','کارت‌خوان','بانکی','نسیه','چک'];
 const $=s=>document.querySelector(s),n=v=>+v||0,fmt=v=>Math.round(n(v)).toLocaleString('fa-IR'),uid=()=>crypto.randomUUID();
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);inv.day=today();
@@ -11,13 +14,13 @@ const pkl=k=>MN[+k.split('-')[1]-1]+' '+k.split('-')[0];
 const amt=s=>n(s.qty)*n(s.price),prf=s=>n(s.qty)*(n(s.price)-n(s.cost)),sum=(a,f)=>a.reduce((x,y)=>x+f(y),0);
 const prod=id=>db.products.find(p=>p.id==id),isAdmin=()=>role=='admin',sortD=a=>a.slice().sort((x,y)=>y.day.localeCompare(x.day));
 const toast=m=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),3500)};
-const persist=()=>{S('db',db);S('q',q)};
+const persist=()=>{if(!publicPreview){S('db',db);S('q',q)}};
 const setStat=()=>{const e=$('#stat');if(e)e.innerHTML=(navigator.onLine?'<i class=ok></i>آنلاین':'<i class=off></i>آفلاین')+(q.length?` · ${fmt(q.length)} تغییر در انتظار ارسال`:'')};
 function stocks(){const m={};db.products.forEach(p=>m[p.id]=n(p.opening));db.purchases.forEach(x=>m[x.product_id]=(m[x.product_id]||0)+n(x.qty));db.sales.forEach(x=>m[x.product_id]=(m[x.product_id]||0)-n(x.qty));return m}
 /* ---------- همگام‌سازی آفلاین/آنلاین ---------- */
-function put(t,r){const i=db[t].findIndex(x=>x.id==r.id);i<0?db[t].push(r):db[t][i]=r;q.push({t,op:'u',r});persist();sync()}
-function del(t,id){db[t]=db[t].filter(x=>x.id!=id);q.push({t,op:'d',id});persist();sync()}
-async function sync(){if(!navigator.onLine||busy||!user)return;busy=true;try{
+function put(t,r){if(publicPreview)return;const i=db[t].findIndex(x=>x.id==r.id);i<0?db[t].push(r):db[t][i]=r;q.push({t,op:'u',r});persist();sync()}
+function del(t,id){if(publicPreview)return;db[t]=db[t].filter(x=>x.id!=id);q.push({t,op:'d',id});persist();sync()}
+async function sync(){if(publicPreview||!sb||!navigator.onLine||busy||!user)return;busy=true;try{
  while(q.length){const j=q[0],r=j.op=='u'?await sb.from(j.t).upsert(j.r):await sb.from(j.t).delete().eq('id',j.id);
   if(r.error){if(/fetch|network|load failed/i.test(r.error.message))throw r.error;toast('خطا در ذخیره: '+r.error.message)}q.shift();persist();setStat()}
  const nd={};for(const t of Object.keys(db)){const r=await sb.from(t).select('*').limit(50000);if(r.error)throw r.error;nd[t]=r.data}
@@ -26,14 +29,16 @@ async function sync(){if(!navigator.onLine||busy||!user)return;busy=true;try{
 function loginView(){$('#app').innerHTML=`<form class=login onsubmit="return doLogin(event)"><h1>🌾 ${esc(CFG.shop)}</h1><input id=u placeholder="نام کاربری" autocomplete=username required><input id=p type=password placeholder="رمز عبور" autocomplete=current-password required><button class=pri>ورود</button></form>`}
 async function doLogin(e){e.preventDefault();const r=await sb.auth.signInWithPassword({email:$('#u').value.trim().toLowerCase()+'@shop.local',password:$('#p').value});r.error?toast('نام کاربری یا رمز عبور اشتباه است'):boot();return false}
 async function logout(){if(q.length&&!confirm('تغییرات ارسال‌نشده با خروج از بین می‌رود. خروج؟'))return;await sb.auth.signOut().catch(()=>{});localStorage.clear();location.reload()}
-async function boot(){try{const{data}=await sb.auth.getSession();if(data.session){user=data.session.user.email.split('@')[0];
+async function boot(){if(publicPreview){user='پیش‌نمایش عمومی';role='viewer';db=emptyDB();q=[];render();return}
+ try{const{data}=await sb.auth.getSession();if(data.session){user=data.session.user.email.split('@')[0];
   if(navigator.onLine){const r=await sb.from('profiles').select('role').eq('id',data.session.user.id).single();if(r.data)role=r.data.role}S('user',user);S('role',role);render();sync();return}}catch(e){}
  user&&!navigator.onLine?render():loginView()}
 /* ---------- نمایش ---------- */
 const TABS={dash:'📊 داشبورد',sales:'🧾 فروش',stock:'📦 انبار',purchases:'🚚 خرید',expenses:'💸 هزینه‌ها'};
 const go=t=>{tab=t;render()};
 function render(){charts.forEach(c=>c.destroy());charts=[];
- $('#app').innerHTML=`<header><b>🌾 ${esc(CFG.shop)}</b><span id=stat></span><span>${esc(user)} (${isAdmin()?'مدیر':'فقط مشاهده'}) <button onclick=logout()>خروج</button></span></header><nav>${Object.entries(TABS).map(([k,v])=>`<a class="${k==tab?'on':''}" onclick="go('${k}')">${v}</a>`).join('')}</nav><main>${V[tab]()}</main>`;
+ const account=publicPreview?'حالت مشاهدهٔ عمومی · دیتابیس متصل نیست':`${esc(user)} (${isAdmin()?'مدیر':'فقط مشاهده'}) <button onclick=logout()>خروج</button>`;
+ $('#app').innerHTML=`<header><b>🌾 ${esc(CFG.shop)}</b><span id=stat></span><span>${account}</span></header><nav>${Object.entries(TABS).map(([k,v])=>`<a class="${k==tab?'on':''}" onclick="go('${k}')">${v}</a>`).join('')}</nav><main>${V[tab]()}</main>`;
  setStat();if(tab=='dash')drawCharts()}
 const tbl=(h,rows)=>`<div class=tw><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c??''}</td>`).join('')}</tr>`).join('')||'<tr><td colspan=99>موردی نیست</td></tr>'}</tbody></table></div>`;
 const opts=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('');
