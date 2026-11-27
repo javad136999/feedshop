@@ -1,6 +1,25 @@
-const C='shop-v1',A=['./','index.html','app.js','config.js','manifest.json','icon.svg'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!=C).map(x=>caches.delete(x)))).then(()=>clients.claim())));
-self.addEventListener('fetch',e=>{const u=new URL(e.request.url);
- if(e.request.method!='GET'||u.hostname.endsWith('supabase.co'))return;
- e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request).then(m=>m||caches.match('index.html'))))});
+const CACHE = 'feedshop-v4';
+const ASSETS = ['./', 'index.html', 'styles.css', 'inventory-math.js', 'app.js', 'config.js', 'manifest.json', 'icon.svg', 'manus-routes.json', 'vendor/chart.umd.min.js', 'vendor/supabase.min.js'];
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+    .then(() => self.clients.claim()));
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  event.respondWith(fetch(request).then(response => {
+    if (response.ok && url.origin === self.location.origin) {
+      const copy = response.clone();
+      caches.open(CACHE).then(cache => cache.put(request, copy));
+    }
+    return response;
+  }).catch(() => caches.match(request).then(cached => cached || (request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))));
+});
