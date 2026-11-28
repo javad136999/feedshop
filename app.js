@@ -20,6 +20,7 @@ const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', '�
 const ICONS = {
   dash: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>',
   sales: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/>',
+  addSale: '<rect x="3" y="3" width="13" height="18" rx="2"/><path d="M7 8h5M7 12h5"/><circle cx="18" cy="17" r="4"/><path d="M18 15v4M16 17h4"/>',
   stock: '<path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/>',
   purchases: '<path d="M3 7h12v11H3zM15 11h4l2 3v4h-6z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>',
   returns: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/>',
@@ -148,7 +149,7 @@ async function sync() {
 
 const NAV_ITEMS = [
   ['dash', 'پیشخوان', 'dash'],
-  ['sales', 'فروش و فاکتور', 'sales'],
+  ['sales', 'ثبت فروش', 'addSale'],
   ['stock', 'فهرست کالاها', 'stock'],
   ['purchases', 'خریدها', 'purchases'],
   ['returns', 'برگشت کالا', 'returns'],
@@ -159,7 +160,7 @@ const NAV_ITEMS = [
 ];
 const PAGE_COPY = {
   dash: ['پیشخوان مدیریتی', 'خلاصه‌ای روشن از فروش، سود، موجودی و حساب‌های فروشگاه.'],
-  sales: ['فروش و فاکتور', 'ثبت سریع فروش و دسترسی به فاکتورهای اخیر.'],
+  sales: ['فروش و فاکتور', 'ثبت فروش جدید و دسترسی سریع به فاکتورهای اخیر.'],
   stock: ['فهرست کالاها', 'قیمت‌ها و موجودی قابل پیگیری، با هشدار نقطه سفارش.'],
   purchases: ['خریدها', 'ورود کالا و نگهداری اطلاعات تأمین‌کننده و روش پرداخت.'],
   returns: ['برگشت کالا', 'ثبت دلیل و پیگیری کالاهای برگشتی و اثر آن‌ها بر موجودی.'],
@@ -170,7 +171,7 @@ const PAGE_COPY = {
 };
 function icon(name) { return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.dash}</svg>`; }
 function navLink([key, label, symbol]) {
-  return `<button class="nav-link ${tab === key ? 'is-active' : ''}" onclick="go('${key}')" ${tab === key ? 'aria-current="page"' : ''}>${icon(symbol)}<span>${label}</span>${key === 'returns' && db.returns.length ? `<small>${format(db.returns.length)}</small>` : ''}</button>`;
+  return `<button class="nav-link ${tab === key ? 'is-active' : ''}" aria-label="${label}" title="${label}" onclick="go('${key}')" ${tab === key ? 'aria-current="page"' : ''}>${icon(symbol)}<span>${label}</span>${key === 'returns' && db.returns.length ? `<small>${format(db.returns.length)}</small>` : ''}</button>`;
 }
 function go(nextTab) { tab = nextTab; render(); }
 function accountLabel() {
@@ -295,7 +296,7 @@ V.dash = () => {
   const accounts = accountTotals();
   const recentInvoices = groupInvoices().slice(0, 5).map(group => [escapeHTML(group.no), formatDate(group.day), escapeHTML(group.customer || 'مشتری گذری'), money(group.total)]);
   const lowRows = low.slice(0, 5).map(item => [escapeHTML(item.name), escapeHTML(item.unit || '—'), format(stock[item.id]), `<span class="badge ${number(stock[item.id]) <= 0 ? 'badge-red' : 'badge-amber'}">${number(stock[item.id]) <= 0 ? 'ناموجود' : 'نیاز به سفارش'}</span>`]);
-  return `<div class="welcome-strip"><div><span class="welcome-label">خلاصه مالی ماهانه</span><h2>فروشگاه در یک نگاه</h2><p>فروش امروز و عملکرد ${monthLabel(selectedDashboardMonth)}</p></div><div class="welcome-actions"><label class="field dashboard-month-select"><span>ماه گزارش</span><select onchange="setDashboardMonth(this.value)">${monthOptions(selectedDashboardMonth, 12).map(option => `<option value="${option.key}" ${option.key === selectedDashboardMonth ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><button class="button button-primary" onclick="go('sales')">${icon('sales')}ثبت فروش</button><button class="button button-secondary" onclick="go('purchases')">${icon('purchases')}ثبت خرید</button></div></div>
+  return `<div class="welcome-strip"><div><span class="welcome-label">خلاصه مالی ماهانه</span><h2>فروشگاه در یک نگاه</h2><p>فروش امروز و عملکرد ${monthLabel(selectedDashboardMonth)}</p></div><div class="welcome-actions"><label class="field dashboard-month-select"><span>ماه گزارش</span><select onchange="setDashboardMonth(this.value)">${monthOptions(selectedDashboardMonth, 12).map(option => `<option value="${option.key}" ${option.key === selectedDashboardMonth ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><button class="button button-primary" aria-label="ثبت فروش جدید" title="ثبت فروش جدید" onclick="go('sales')">${icon('addSale')}ثبت فروش</button><button class="button button-secondary" onclick="go('purchases')">${icon('purchases')}ثبت خرید</button></div></div>
     <div class="metrics-grid">${metric('فروش خالص امروز', money(todaySales), 'پس از کسر برگشتی‌ها', 'green', 'sales')}${metric('سود ناخالص ماه', money(report.grossProfit), 'پیش از کسر هزینه‌ها', 'amber', 'reports')}${metric('هزینه ماه', money(report.expenseTotal), 'ثبت‌شده در ماه جاری', 'coral', 'expenses')}${metric('سود خالص ماه', money(report.netProfit), 'سود ناخالص منهای هزینه', report.netProfit < 0 ? 'coral' : 'green', 'bank')}${metric('کالای نیازمند سفارش', format(low.length), 'بر اساس نقطه سفارش کالا', low.length ? 'amber' : 'green', 'stock')}${metric('طلب / بدهی اشخاص', `${format(accounts.receivable)} / ${format(accounts.payable)}`, 'طلب از مشتری / بدهی به تأمین‌کننده', 'slate', 'parties')}</div>
     <div class="dashboard-charts"><div class="chart-panel">${card('روند فروش روزانه', '<div class="chart-area"><canvas id="daily-chart" aria-label="نمودار فروش روزانه"></canvas></div>', { subtitle: '۳۰ روز گذشته · مبالغ به تومان' })}</div><div class="chart-panel">${card('مقایسه ماهانه', '<div class="chart-area"><canvas id="monthly-chart" aria-label="نمودار مقایسه ماهانه"></canvas></div>', { subtitle: 'فروش خالص، سود خالص و هزینه' })}</div></div>
     <div class="dashboard-lists">${card('آخرین فاکتورها', table(['شماره فاکتور', 'تاریخ', 'مشتری', 'مبلغ خالص'], recentInvoices), { action: '<button class="text-button" onclick="go(\'sales\')">مشاهده همه</button>' })}${card('هشدار موجودی', table(['کالا', 'واحد', 'موجودی', 'وضعیت'], lowRows, 'همه کالاها موجودی کافی دارند.'), { action: '<button class="text-button" onclick="go(\'stock\')">فهرست کالاها</button>' })}</div>`;
@@ -342,14 +343,15 @@ function updateInvoiceTotal() {
 }
 V.sales = () => {
   const stock = stocks();
-  const create = isAdmin() ? `<section class="panel sale-panel"><div class="panel-heading"><div><h2>ثبت فاکتور فروش</h2><p>اقلام فاکتور را انتخاب کنید؛ قیمت متناسب با نوع مشتری پیشنهاد می‌شود.</p></div><span class="form-kicker">فروش جدید</span></div><div class="form-grid form-grid-four">
+  const create = isAdmin() ? `<section class="panel sale-panel"><div class="panel-heading"><div><h2>ثبت فاکتور فروش</h2><p>اقلام فاکتور را انتخاب کنید؛ قیمت متناسب با نوع مشتری پیشنهاد می‌شود.</p></div><span class="form-kicker">${icon('addSale')} فروش جدید</span></div><div class="form-grid form-grid-four">
     <label class="field"><span>تاریخ</span><input type="date" value="${invoice.day}" oninput="invoice.day=this.value"></label><label class="field"><span>نام مشتری</span><input value="${escapeHTML(invoice.customer)}" oninput="invoice.customer=this.value" placeholder="اختیاری"></label>
     <label class="field"><span>نوع مشتری</span><select onchange="invoice.ctype=this.value;refreshPrices()">${optionList(['خرده', 'عمده'], invoice.ctype)}</select></label><label class="field"><span>روش پرداخت</span><select onchange="invoice.pay=this.value">${optionList(PAYMENTS, invoice.pay)}</select></label></div>
     <div class="invoice-lines">${cart.map((item, index) => `<div class="invoice-line"><label class="field product-select"><span>کالا</span><select onchange="chooseProduct(${index}, this.value)"><option value="">انتخاب کالا</option>${db.products.map(entry => `<option value="${escapeHTML(entry.id)}" ${entry.id == item.product_id ? 'selected' : ''}>${escapeHTML(entry.name)} · موجودی ${format(stock[entry.id])} ${escapeHTML(entry.unit || '')}</option>`).join('')}</select></label><label class="field"><span>تعداد / کیلو</span><input type="number" min="0.01" step="any" inputmode="decimal" placeholder="0" value="${item.qty ?? ''}" oninput="cart[${index}].qty=Number(this.value);updateInvoiceTotal()"></label><label class="field"><span>قیمت واحد (تومان)</span><input type="number" min="0" step="any" inputmode="numeric" placeholder="0" value="${item.price ?? ''}" oninput="cart[${index}].price=Number(this.value);updateInvoiceTotal()"></label><button class="icon-button line-remove" title="حذف ردیف" aria-label="حذف ردیف" onclick="cart.splice(${index},1);if(!cart.length)cart=[{}];render()">×</button></div>`).join('')}</div>
-    <div class="invoice-footer"><button class="button button-secondary" onclick="cart.push({});render()">＋ افزودن ردیف</button><div class="invoice-total"><span>جمع فاکتور</span><b id="invoice-total">${money(sum(cart, item => number(item.qty) * number(item.price)))}</b></div><button class="button button-primary" onclick="saveInvoice()">ثبت فاکتور</button></div></section>` : '';
+    <div class="invoice-footer"><button class="button button-secondary" onclick="cart.push({});render()">＋ افزودن ردیف</button><div class="invoice-total"><span>جمع فاکتور</span><b id="invoice-total">${money(sum(cart, item => number(item.qty) * number(item.price)))}</b></div><button class="button button-primary" onclick="saveInvoice()">${icon('addSale')} ثبت فروش</button></div></section>` : '';
+  const registerNotice = !isAdmin() ? `<section class="sale-access-panel" role="status"><div class="sale-access-copy"><span class="sale-access-icon">${icon('addSale')}</span><div><b>ثبت فروش</b><p>${publicPreview ? 'برای ذخیرهٔ واقعی فروش، ابتدا اتصال Supabase را تنظیم کنید. این نسخه در حالت پیش‌نمایش است.' : 'حساب فعلی فقط دسترسی مشاهده دارد؛ برای ثبت فروش، دسترسی مدیر لازم است.'}</p></div></div><button class="button button-primary" type="button" disabled aria-disabled="true" title="ثبت فروش در این حالت غیرفعال است">${icon('addSale')}ثبت فروش</button></section>` : '';
   const latestInvoiceAction = lastSavedInvoiceNo && db.sales.some(row => row.invoice === lastSavedInvoiceNo) ? `<section class="invoice-success-card"><div><span class="invoice-success-mark">✓</span><div><b>فاکتور ${escapeHTML(lastSavedInvoiceNo)} ثبت شد</b><small>نسخهٔ چاپی را برای تحویل به مشتری صادر کنید.</small></div></div><button class="button button-primary" onclick="printInvoice('${escapeHTML(lastSavedInvoiceNo)}')">صدور فاکتور چاپی</button></section>` : '';
   const rows = groupInvoices().slice(0, 100).map(group => [escapeHTML(group.no), formatDate(group.day), escapeHTML(group.customer || 'مشتری گذری'), `<span class="badge badge-neutral">${escapeHTML(group.pay || '—')}</span>`, money(group.total), `<div class="row-actions"><button class="button button-secondary button-small" onclick="printInvoice('${escapeHTML(group.no)}')">صدور / چاپ فاکتور</button>${isAdmin() ? `<button class="icon-button danger-button" title="حذف فاکتور" onclick="deleteInvoice('${escapeHTML(group.no)}')">×</button>` : ''}</div>`]);
-  return `${create}${latestInvoiceAction}${card('فاکتورهای اخیر', `${toolbar('sales-search', 'جست‌وجو در شماره فاکتور یا مشتری')}${table(['شماره', 'تاریخ', 'مشتری', 'پرداخت', 'مبلغ خالص', 'عملیات'], rows, 'هنوز فاکتوری ثبت نشده است.')}`, { subtitle: 'نمایش ۱۰۰ فاکتور اخیر · مبالغ به تومان' })}`.replace('<table>', '<table data-filter-table="sales-search">');
+  return `${create}${registerNotice}${latestInvoiceAction}${card('فاکتورهای اخیر', `${toolbar('sales-search', 'جست‌وجو در شماره فاکتور یا مشتری')}${table(['شماره', 'تاریخ', 'مشتری', 'پرداخت', 'مبلغ خالص', 'عملیات'], rows, 'هنوز فاکتوری ثبت نشده است.')}`, { subtitle: 'نمایش ۱۰۰ فاکتور اخیر · مبالغ به تومان' })}`.replace('<table>', '<table data-filter-table="sales-search">');
 };
 function saveInvoice() {
   const lines = cart.filter(item => item.product_id && number(item.qty) > 0);

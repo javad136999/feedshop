@@ -327,3 +327,17 @@ tbody tr:hover td { background: #fcfcfa; }
   .stock-actions { justify-content: flex-end; }
   .stock-actions .button { min-height: 35px; padding-inline: 9px; font-size: 10px; }
 }
+
+.form-kicker { display: inline-flex; align-items: center; gap: 5px; }
+.form-kicker svg { width: 14px; height: 14px; }
+.sale-access-panel { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 14px 18px; border: 1px solid #eadbbd; border-radius: 15px; background: #fffaf0; }
+.sale-access-copy { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.sale-access-icon { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border-radius: 12px; background: var(--amber-soft); color: #9a6b1f; }
+.sale-access-icon svg { width: 21px; height: 21px; }
+.sale-access-copy b { display: block; color: #26382f; font-size: 12px; }
+.sale-access-copy p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+.button:disabled, .button:disabled:hover { cursor: not-allowed; opacity: .62; transform: none; box-shadow: none; }
+@media (max-width: 680px) {
+  .sale-access-panel { align-items: stretch; flex-direction: column; padding: 12px; }
+  .sale-access-panel > .button { width: 100%; }
+}
