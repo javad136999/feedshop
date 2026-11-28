@@ -341,3 +341,13 @@ tbody tr:hover td { background: #fcfcfa; }
   .sale-access-panel { align-items: stretch; flex-direction: column; padding: 12px; }
   .sale-access-panel > .button { width: 100%; }
 }
+
+.page-heading-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.page-heading-sale-action { min-height: 42px; padding-inline: 13px; }
+.page-heading-sale-action svg { width: 19px; height: 19px; }
+.product-code { display: inline-block; direction: ltr; padding: 4px 7px; border: 1px solid #dce8df; border-radius: 7px; background: #f0f5f1; color: #244e3a; font-family: Tahoma, sans-serif; font-size: 10px; font-weight: 700; white-space: nowrap; }
+@media (max-width: 680px) {
+  .page-heading-actions { align-items: flex-end; flex-direction: column; gap: 5px; }
+  .page-heading-sale-action { min-height: 33px; gap: 5px; padding-inline: 9px; font-size: 10px; }
+  .page-heading-sale-action svg { width: 15px; height: 15px; }
+}

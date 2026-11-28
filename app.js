@@ -174,6 +174,7 @@ function navLink([key, label, symbol]) {
   return `<button class="nav-link ${tab === key ? 'is-active' : ''}" aria-label="${label}" title="${label}" onclick="go('${key}')" ${tab === key ? 'aria-current="page"' : ''}>${icon(symbol)}<span>${label}</span>${key === 'returns' && db.returns.length ? `<small>${format(db.returns.length)}</small>` : ''}</button>`;
 }
 function go(nextTab) { tab = nextTab; render(); }
+function focusSaleForm() { $('#sale-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function accountLabel() {
   if (publicPreview) return 'حالت پیش‌نمایش';
   return `${escapeHTML(user || 'کاربر')} · ${isAdmin() ? 'مدیر' : 'فقط مشاهده'}`;
@@ -218,13 +219,16 @@ function render() {
   charts.forEach(chart => chart.destroy());
   charts = [];
   const [title, description] = PAGE_COPY[tab] || PAGE_COPY.dash;
+  const salesHeaderAction = tab === 'sales' ? isAdmin()
+    ? `<button class="button button-primary page-heading-sale-action" aria-label="رفتن به فرم ثبت فروش" onclick="focusSaleForm()">${icon('addSale')} ثبت فروش</button>`
+    : `<button class="button button-primary page-heading-sale-action" type="button" disabled aria-disabled="true" title="برای ثبت فروش، اتصال Supabase و دسترسی مدیر لازم است">${icon('addSale')} ثبت فروش</button>` : '';
   $('#app').innerHTML = `<div class="app-shell">
     <aside class="sidebar"><a class="brand" href="#" onclick="go('dash');return false"><span class="brand-mark">${icon('leaf')}</span><span class="brand-copy"><b>${escapeHTML(CFG.shop)}</b><small>مدیریت فروشگاه</small></span></a>
       <div class="nav-caption">منوی اصلی</div><nav class="side-nav" aria-label="منوی اصلی">${NAV_ITEMS.map(navLink).join('')}</nav>
       <div class="sidebar-footer"><span class="sidebar-footer-mark">${icon('stock')}</span><div><b>دفتر فروشگاه</b><small>ثبت منظم، تصمیم مطمئن</small></div></div>
     </aside>
     <div class="workspace"><header class="topbar"><div class="topbar-mobile-brand"><span class="brand-mark">${icon('leaf')}</span><b>${escapeHTML(CFG.shop)}</b></div><div id="connection-status" class="connection-status"></div><div class="topbar-user"><span class="avatar">${icon('parties')}</span><span>${accountLabel()}</span>${!publicPreview ? '<button class="button button-quiet button-small" onclick="logout()">خروج</button>' : ''}</div></header>
-      <main class="main-content"><section class="page-heading"><div><p class="eyebrow">پنل مدیریتی فروشگاه خوراک دام و طیور</p><h1>${title}</h1><p>${description}</p></div><div class="date-card"><span>امروز</span><b>${formatDate(today())}</b></div></section><div class="page-content">${(V[tab] || V.dash)()}</div></main>
+      <main class="main-content"><section class="page-heading"><div><p class="eyebrow">پنل مدیریتی فروشگاه خوراک دام و طیور</p><h1>${title}</h1><p>${description}</p></div><div class="page-heading-actions">${salesHeaderAction}<div class="date-card"><span>امروز</span><b>${formatDate(today())}</b></div></div></section><div class="page-content">${(V[tab] || V.dash)()}</div></main>
     </div>
     <nav class="mobile-nav" aria-label="ناوبری موبایل">${NAV_ITEMS.map(navLink).join('')}</nav>
   </div>`;
@@ -343,12 +347,12 @@ function updateInvoiceTotal() {
 }
 V.sales = () => {
   const stock = stocks();
-  const create = isAdmin() ? `<section class="panel sale-panel"><div class="panel-heading"><div><h2>ثبت فاکتور فروش</h2><p>اقلام فاکتور را انتخاب کنید؛ قیمت متناسب با نوع مشتری پیشنهاد می‌شود.</p></div><span class="form-kicker">${icon('addSale')} فروش جدید</span></div><div class="form-grid form-grid-four">
+  const create = isAdmin() ? `<section class="panel sale-panel" id="sale-form" tabindex="-1"><div class="panel-heading"><div><h2>ثبت فاکتور فروش</h2><p>اقلام فاکتور را انتخاب کنید؛ قیمت متناسب با نوع مشتری پیشنهاد می‌شود.</p></div><span class="form-kicker">${icon('addSale')} فروش جدید</span></div><div class="form-grid form-grid-four">
     <label class="field"><span>تاریخ</span><input type="date" value="${invoice.day}" oninput="invoice.day=this.value"></label><label class="field"><span>نام مشتری</span><input value="${escapeHTML(invoice.customer)}" oninput="invoice.customer=this.value" placeholder="اختیاری"></label>
     <label class="field"><span>نوع مشتری</span><select onchange="invoice.ctype=this.value;refreshPrices()">${optionList(['خرده', 'عمده'], invoice.ctype)}</select></label><label class="field"><span>روش پرداخت</span><select onchange="invoice.pay=this.value">${optionList(PAYMENTS, invoice.pay)}</select></label></div>
-    <div class="invoice-lines">${cart.map((item, index) => `<div class="invoice-line"><label class="field product-select"><span>کالا</span><select onchange="chooseProduct(${index}, this.value)"><option value="">انتخاب کالا</option>${db.products.map(entry => `<option value="${escapeHTML(entry.id)}" ${entry.id == item.product_id ? 'selected' : ''}>${escapeHTML(entry.name)} · موجودی ${format(stock[entry.id])} ${escapeHTML(entry.unit || '')}</option>`).join('')}</select></label><label class="field"><span>تعداد / کیلو</span><input type="number" min="0.01" step="any" inputmode="decimal" placeholder="0" value="${item.qty ?? ''}" oninput="cart[${index}].qty=Number(this.value);updateInvoiceTotal()"></label><label class="field"><span>قیمت واحد (تومان)</span><input type="number" min="0" step="any" inputmode="numeric" placeholder="0" value="${item.price ?? ''}" oninput="cart[${index}].price=Number(this.value);updateInvoiceTotal()"></label><button class="icon-button line-remove" title="حذف ردیف" aria-label="حذف ردیف" onclick="cart.splice(${index},1);if(!cart.length)cart=[{}];render()">×</button></div>`).join('')}</div>
+    <div class="invoice-lines">${cart.map((item, index) => `<div class="invoice-line"><label class="field product-select"><span>کالا</span><select onchange="chooseProduct(${index}, this.value)"><option value="">انتخاب کالا</option>${db.products.map(entry => `<option value="${escapeHTML(entry.id)}" ${entry.id == item.product_id ? 'selected' : ''}>${entry.code ? `${escapeHTML(entry.code)} · ` : ''}${escapeHTML(entry.name)} · موجودی ${format(stock[entry.id])} ${escapeHTML(entry.unit || '')}</option>`).join('')}</select></label><label class="field"><span>تعداد / کیلو</span><input type="number" min="0.01" step="any" inputmode="decimal" placeholder="0" value="${item.qty ?? ''}" oninput="cart[${index}].qty=Number(this.value);updateInvoiceTotal()"></label><label class="field"><span>قیمت واحد (تومان)</span><input type="number" min="0" step="any" inputmode="numeric" placeholder="0" value="${item.price ?? ''}" oninput="cart[${index}].price=Number(this.value);updateInvoiceTotal()"></label><button class="icon-button line-remove" title="حذف ردیف" aria-label="حذف ردیف" onclick="cart.splice(${index},1);if(!cart.length)cart=[{}];render()">×</button></div>`).join('')}</div>
     <div class="invoice-footer"><button class="button button-secondary" onclick="cart.push({});render()">＋ افزودن ردیف</button><div class="invoice-total"><span>جمع فاکتور</span><b id="invoice-total">${money(sum(cart, item => number(item.qty) * number(item.price)))}</b></div><button class="button button-primary" onclick="saveInvoice()">${icon('addSale')} ثبت فروش</button></div></section>` : '';
-  const registerNotice = !isAdmin() ? `<section class="sale-access-panel" role="status"><div class="sale-access-copy"><span class="sale-access-icon">${icon('addSale')}</span><div><b>ثبت فروش</b><p>${publicPreview ? 'برای ذخیرهٔ واقعی فروش، ابتدا اتصال Supabase را تنظیم کنید. این نسخه در حالت پیش‌نمایش است.' : 'حساب فعلی فقط دسترسی مشاهده دارد؛ برای ثبت فروش، دسترسی مدیر لازم است.'}</p></div></div><button class="button button-primary" type="button" disabled aria-disabled="true" title="ثبت فروش در این حالت غیرفعال است">${icon('addSale')}ثبت فروش</button></section>` : '';
+  const registerNotice = !isAdmin() ? `<section class="sale-access-panel" role="status"><div class="sale-access-copy"><span class="sale-access-icon">${icon('addSale')}</span><div><b>ثبت فروش</b><p>${publicPreview ? 'برای ذخیرهٔ واقعی فروش، ابتدا اتصال Supabase را تنظیم کنید. این نسخه در حالت پیش‌نمایش است.' : 'حساب فعلی فقط دسترسی مشاهده دارد؛ برای ثبت فروش، دسترسی مدیر لازم است.'}</p></div></div></section>` : '';
   const latestInvoiceAction = lastSavedInvoiceNo && db.sales.some(row => row.invoice === lastSavedInvoiceNo) ? `<section class="invoice-success-card"><div><span class="invoice-success-mark">✓</span><div><b>فاکتور ${escapeHTML(lastSavedInvoiceNo)} ثبت شد</b><small>نسخهٔ چاپی را برای تحویل به مشتری صادر کنید.</small></div></div><button class="button button-primary" onclick="printInvoice('${escapeHTML(lastSavedInvoiceNo)}')">صدور فاکتور چاپی</button></section>` : '';
   const rows = groupInvoices().slice(0, 100).map(group => [escapeHTML(group.no), formatDate(group.day), escapeHTML(group.customer || 'مشتری گذری'), `<span class="badge badge-neutral">${escapeHTML(group.pay || '—')}</span>`, money(group.total), `<div class="row-actions"><button class="button button-secondary button-small" onclick="printInvoice('${escapeHTML(group.no)}')">صدور / چاپ فاکتور</button>${isAdmin() ? `<button class="icon-button danger-button" title="حذف فاکتور" onclick="deleteInvoice('${escapeHTML(group.no)}')">×</button>` : ''}</div>`]);
   return `${create}${registerNotice}${latestInvoiceAction}${card('فاکتورهای اخیر', `${toolbar('sales-search', 'جست‌وجو در شماره فاکتور یا مشتری')}${table(['شماره', 'تاریخ', 'مشتری', 'پرداخت', 'مبلغ خالص', 'عملیات'], rows, 'هنوز فاکتوری ثبت نشده است.')}`, { subtitle: 'نمایش ۱۰۰ فاکتور اخیر · مبالغ به تومان' })}`.replace('<table>', '<table data-filter-table="sales-search">');
@@ -402,7 +406,7 @@ V.stock = () => {
     const orderButton = isAdmin() && record.status !== 'sufficient' ? `<button class="button button-secondary button-small" onclick="addPurchase('${escapeHTML(item.id)}')">ثبت خرید</button>` : '';
     const actions = isAdmin() ? `<div class="row-actions">${orderButton}<button class="button button-secondary button-small" onclick="editProduct('${escapeHTML(item.id)}')">ویرایش</button></div>` : '—';
     return [
-      `<span data-stock-product="${escapeHTML(item.id)}">${escapeHTML(item.code || '—')}</span>`,
+      `<code class="product-code" data-stock-product="${escapeHTML(item.id)}">${escapeHTML(item.code || '—')}</code>`,
       `<b>${escapeHTML(item.name)}</b><small class="cell-subtitle">${escapeHTML(item.category || 'بدون دسته')}</small>`,
       escapeHTML(item.unit || '—'), money(item.buy), money(item.retail), money(item.wholesale),
       formatQuantity(record.opening), formatQuantity(record.purchased), formatQuantity(record.sold), formatQuantity(record.returned),
@@ -463,7 +467,14 @@ function editProduct(id) {
   showForm(id ? 'ویرایش کالا' : 'افزودن کالا', [
     { key: 'code', label: 'کد کالا', required: true }, { key: 'name', label: 'نام کالا', required: true }, { key: 'category', label: 'دسته کالا' }, { key: 'unit', label: 'واحد', placeholder: 'مثلاً کیسه ۲۵ کیلویی' },
     { key: 'buy', label: 'قیمت خرید (تومان)', type: 'number' }, { key: 'retail', label: 'قیمت فروش خرده (تومان)', type: 'number' }, { key: 'wholesale', label: 'قیمت فروش عمده (تومان)', type: 'number' }, { key: 'opening', label: 'موجودی اولیه', type: 'number' }, { key: 'reorder', label: 'نقطه سفارش', type: 'number' }
-  ], item, values => { put('products', { ...item, ...values }); toast('اطلاعات کالا ذخیره شد.'); render(); });
+  ], item, values => {
+    const code = String(values.code || '').trim().toUpperCase();
+    if (db.products.some(existing => existing.id !== item.id && String(existing.code || '').trim().toUpperCase() === code)) {
+      toast('این کد کالا قبلاً برای محصول دیگری ثبت شده است.', 'error');
+      return;
+    }
+    put('products', { ...item, ...values, code }); toast('اطلاعات کالا ذخیره شد.'); render();
+  });
 }
 
 V.purchases = () => {
